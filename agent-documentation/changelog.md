@@ -97,6 +97,12 @@ Three changes in this session:
 
 ---
 
+## 2026-04-08 ~22:10 — Design Document
+
+Created `agent-documentation/design.md` — a comprehensive software design document covering architecture, all components, data model, data flows, the authority/flagging system, tech stack, project structure, testing strategy, and key design decisions. This document serves as the starting point for any AI agent or developer working on the codebase.
+
+---
+
 ## 2026-04-08 ~22:00 — Config Validation + Device-Based Identity + Startup Auto-Restore
 
 Three features addressing startup reliability and identity persistence.

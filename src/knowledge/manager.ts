@@ -10,7 +10,6 @@ import { rankBySimilarity } from "./embeddings.js";
 
 const SIMILARITY_THRESHOLD = 0.15;
 const DRIFT_THRESHOLD = 0.4;
-const CONTRADICTION_THRESHOLD = 0.3;
 
 export class KnowledgeManager {
   private db: MemoryDB;
