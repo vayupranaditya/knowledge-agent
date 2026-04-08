@@ -306,7 +306,7 @@ export class KnowledgeAgent {
       .trim();
   }
 
-  private async processKnowledgeExtraction(
+  protected async processKnowledgeExtraction(
     userMessage: string,
     llmResponse: string
   ): Promise<void> {

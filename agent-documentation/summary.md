@@ -1,6 +1,6 @@
 # Knowledge Bot — Summary
 
-An AI-powered CLI chat bot that removes knowledge silos by compiling knowledge from everyone on the team into a centralized, semantically searchable knowledge base.
+An AI-powered chat bot that removes knowledge silos by compiling knowledge from everyone on the team into a centralized, semantically searchable knowledge base. Available as a CLI TUI app and as an HTTP API with Chainlit web UI.
 
 ## What It Does
 
@@ -11,6 +11,30 @@ An AI-powered CLI chat bot that removes knowledge silos by compiling knowledge f
 - Internal actions (JSON blocks for knowledge storage/flagging) are stripped from bot output — users only see the conversational response.
 - Validates provider connection on startup before entering chat.
 
+## Interfaces
+
+### TUI (Terminal)
+- Start with `npm run chat`
+- Ink/React-based terminal chat interface with slash commands
+
+### HTTP API
+- Start with `npm run server` (default port 3000)
+- RESTful endpoints: `/chat`, `/identify`, `/search`, `/people`, `/stats`, `/health`
+- Session-based: each conversation gets a UUID session ID for continuity
+- CORS enabled for cross-origin access
+
+### Chainlit Web UI
+- Python-based web frontend in `chainlit_app/`
+- Connects to the HTTP API backend
+- Start with `chainlit run chainlit_app.py` (after `pip install -r requirements.txt`)
+
+## Service Architecture
+
+- `ChatService` manages session→agent mapping via an in-memory `Map<string, KnowledgeAgent>`
+- Session IDs act as device keys — reuses existing `device_identities` infrastructure for identity persistence
+- `intent-validator.ts` provides field-level validation for LLM action intents (store, update, red_flag, register_person)
+- Express server with CORS and JSON body parsing
+
 ## Device-Based Identity
 
 - On startup, the bot generates a device key from the machine's hostname and OS username (SHA-256 hash).
@@ -18,6 +42,7 @@ An AI-powered CLI chat bot that removes knowledge silos by compiling knowledge f
 - When a user runs `/iam <name>` and matches a registered person, the device key is linked to that person for future sessions.
 - When a new person is registered via the LLM's `register_person` action, the device key is also linked.
 - Device links are stored in a `device_identities` table (device_key → person_id).
+- For the HTTP API, session IDs serve as device keys.
 
 ## People & Authority
 
@@ -50,10 +75,23 @@ An AI-powered CLI chat bot that removes knowledge silos by compiling knowledge f
 | `/help` | Show all commands |
 | `/quit` or `/exit` | Exit the bot |
 
+## HTTP API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/chat` | Send a message, get a reply + session ID |
+| `POST` | `/identify` | Identify user by name within a session |
+| `GET` | `/search?q=` | Semantic search across knowledge base |
+| `GET` | `/people` | List all registered team members |
+| `GET` | `/stats` | Knowledge base statistics |
+| `GET` | `/health` | Health check |
+
 ## CLI Inspect Flags
 
 ```bash
 npm run chat                    # Start TUI chat
+npm run server                  # Start HTTP API server
+npm run server:dev              # Start HTTP API with file watching
 npm run inspect:db              # Inspect trusted knowledge from CLI
 npm run inspect:people          # Inspect registered team members
 npm run inspect:unverified      # Inspect red-flagged knowledge
@@ -72,6 +110,7 @@ Copy `.env.example` to `.env` and set:
 | `LLM_MODEL` | Model name override | per-provider default |
 | `OLLAMA_BASE_URL` | Ollama server URL | `http://localhost:11434` |
 | `DB_PATH` | SQLite database path | `./data/knowledge.db` |
+| `PORT` | HTTP API server port | `3000` |
 
 Default models per provider:
 
@@ -100,8 +139,8 @@ knowledge-bot/
 │   ├── config.ts               # LLM provider config + connection validation
 │   ├── device-key.ts           # Device fingerprint generation (hostname + username hash)
 │   ├── db/
-│   │   ├── schema.ts           # Types + SQL for knowledge, people, unverified, device_identities
-│   │   └── memory-db.ts        # SQLite operations (knowledge, people, unverified, device links)
+│   │   ├── schema.ts           # Types + SQL for knowledge, people, unverified, device_identities, sessions
+│   │   └── memory-db.ts        # SQLite operations (knowledge, people, unverified, device links, sessions)
 │   ├── llm/
 │   │   ├── provider.ts         # LLM provider interface + retry logic
 │   │   ├── gemini.ts           # Gemini implementation
@@ -113,16 +152,25 @@ knowledge-bot/
 │   │   └── embeddings.ts       # TF-IDF cosine similarity for semantic search
 │   ├── agent/
 │   │   └── agent.ts            # Agent orchestration, identity tracking, device restore, commands
+│   ├── service/
+│   │   ├── chat-service.ts     # Headless agent service — session→agent mapping
+│   │   └── intent-validator.ts # LLM action intent validation
+│   ├── api/
+│   │   ├── server.ts           # Express HTTP API (routes, CORS, JSON parsing)
+│   │   └── start-server.ts     # API server entry point
 │   └── tui/
 │       └── chat.ts             # Ink-based TUI chat interface
-├── tests/                      # 136 tests, ~86% coverage
+├── chainlit_app/
+│   ├── chainlit_app.py         # Chainlit web UI frontend
+│   └── requirements.txt        # Python dependencies (chainlit, httpx)
+├── tests/                      # 194 tests, ~90% coverage
 └── data/                       # SQLite DB at runtime
 ```
 
 ## Test Suite
 
-136 tests across 16 test files covering:
-- Memory DB operations (knowledge, people, unverified, device identity CRUD)
+194 tests across 20 test files covering:
+- Memory DB operations (knowledge, people, unverified, device identity, sessions CRUD)
 - Knowledge manager (search, smart store, authority-aware store, flagging, promotion)
 - Agent (commands, identity tracking, device restore, LLM integration, knowledge extraction, output stripping)
 - Embeddings (cosine similarity, ranking)
@@ -130,6 +178,9 @@ knowledge-bot/
 - LLM provider factory (gemini, openai, ollama)
 - Retry logic (rate limits, transient errors, backoff)
 - Startup (auto-identify from device key, device linking on /iam, startup greeting)
+- Chat service (session creation, reuse, identity tracking, conversation continuity)
+- API server (all endpoints: /chat, /identify, /search, /people, /stats, /health)
+- Intent validator (store, update, red_flag, register_person validation)
 
 Run tests: `npm test`
 Run with coverage: `npm run test:coverage`

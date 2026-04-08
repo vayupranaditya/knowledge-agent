@@ -10,6 +10,7 @@ export interface AppConfig {
   model: string;
   dbPath: string;
   ollamaBaseUrl: string;
+  port: number;
 }
 
 const DEFAULT_MODELS: Record<LLMProviderType, string> = {
@@ -46,8 +47,9 @@ export function loadConfig(): AppConfig {
   const model = process.env.LLM_MODEL || DEFAULT_MODELS[provider];
   const dbPath = process.env.DB_PATH || "./data/knowledge.db";
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+  const port = parseInt(process.env.PORT || "3000", 10);
 
-  return { llmProvider: provider, apiKey, model, dbPath, ollamaBaseUrl };
+  return { llmProvider: provider, apiKey, model, dbPath, ollamaBaseUrl, port };
 }
 
 export function createTestConfig(overrides: Partial<AppConfig> = {}): AppConfig {
@@ -57,6 +59,7 @@ export function createTestConfig(overrides: Partial<AppConfig> = {}): AppConfig 
     model: "test-model",
     dbPath: ":memory:",
     ollamaBaseUrl: "http://localhost:11434",
+    port: 3000,
     ...overrides,
   };
 }

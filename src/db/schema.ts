@@ -121,6 +121,16 @@ export const CREATE_DEVICE_IDENTITY_TABLE_SQL = `
   )
 `;
 
+export const CREATE_SESSIONS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS sessions (
+    session_id TEXT PRIMARY KEY,
+    person_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_active TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (person_id) REFERENCES people(id)
+  )
+`;
+
 export const CREATE_INDEX_SQL = [
   `CREATE INDEX IF NOT EXISTS idx_knowledge_topic ON knowledge(topic)`,
   `CREATE INDEX IF NOT EXISTS idx_knowledge_subtopic ON knowledge(subtopic)`,
@@ -128,4 +138,5 @@ export const CREATE_INDEX_SQL = [
   `CREATE INDEX IF NOT EXISTS idx_people_name ON people(name)`,
   `CREATE INDEX IF NOT EXISTS idx_unverified_topic ON unverified_knowledge(topic)`,
   `CREATE INDEX IF NOT EXISTS idx_device_person ON device_identities(person_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_sessions_person ON sessions(person_id)`,
 ];

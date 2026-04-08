@@ -1,0 +1,7 @@
+
+.chainlit/
+bin/
+lib/
+venv/
+
+pyvenv.cfg

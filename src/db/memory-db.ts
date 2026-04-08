@@ -11,6 +11,7 @@ import {
   CREATE_PEOPLE_TABLE_SQL,
   CREATE_UNVERIFIED_TABLE_SQL,
   CREATE_DEVICE_IDENTITY_TABLE_SQL,
+  CREATE_SESSIONS_TABLE_SQL,
   CREATE_INDEX_SQL,
 } from "./schema.js";
 
@@ -28,6 +29,7 @@ export class MemoryDB {
     this.db.exec(CREATE_PEOPLE_TABLE_SQL);
     this.db.exec(CREATE_UNVERIFIED_TABLE_SQL);
     this.db.exec(CREATE_DEVICE_IDENTITY_TABLE_SQL);
+    this.db.exec(CREATE_SESSIONS_TABLE_SQL);
     for (const sql of CREATE_INDEX_SQL) {
       this.db.exec(sql);
     }
@@ -288,6 +290,28 @@ export class MemoryDB {
     const stmt = this.db.prepare("DELETE FROM device_identities WHERE device_key = ?");
     const result = stmt.run(deviceKey);
     return result.changes > 0;
+  }
+
+  // ==================== Sessions ====================
+
+  linkSession(sessionId: string, personId: string): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO sessions (session_id, person_id, last_active)
+      VALUES (?, ?, datetime('now'))
+      ON CONFLICT(session_id) DO UPDATE SET person_id = ?, last_active = datetime('now')
+    `);
+    stmt.run(sessionId, personId, personId);
+  }
+
+  getPersonIdBySession(sessionId: string): string | undefined {
+    const stmt = this.db.prepare("SELECT person_id FROM sessions WHERE session_id = ?");
+    const row = stmt.get(sessionId) as { person_id: string } | undefined;
+    return row?.person_id ?? undefined;
+  }
+
+  touchSession(sessionId: string): void {
+    const stmt = this.db.prepare("UPDATE sessions SET last_active = datetime('now') WHERE session_id = ?");
+    stmt.run(sessionId);
   }
 
   close(): void {
